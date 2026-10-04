@@ -1,0 +1,2562 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grow a Garden 2D</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(#79cfff, #dff6ff);
+    transition: background .5s ease;
+}
+
+body.night {
+    background: linear-gradient(#101b3d, #283b68);
+}
+
+body.rain {
+    background: linear-gradient(#66819a, #b4c5d2);
+}
+
+body.storm {
+    background: linear-gradient(#202536, #4a5067);
+}
+
+body.rainbow {
+    background: linear-gradient(#79cfff, #dff6ff);
+}
+
+/* =========================
+   HORNÍ LIŠTA
+========================= */
+
+#topBar {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    gap: 7px;
+    z-index: 1000;
+}
+
+#topBar button {
+    border: none;
+    border-radius: 9px;
+    background: white;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+#topBar button:hover {
+    background: #eeeeee;
+}
+
+#weatherBox {
+    position: fixed;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255,255,255,0.92);
+    padding: 7px 12px;
+    border-radius: 10px;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+    z-index: 1000;
+    pointer-events: none;
+}
+
+#weatherEffect {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 150;
+}
+
+#weatherEffect.rain {
+    background: repeating-linear-gradient(105deg, transparent 0 18px, rgba(120,170,255,.28) 19px 21px, transparent 22px 34px);
+    animation: rainMove .45s linear infinite;
+}
+
+@keyframes rainMove {
+    from { transform: translateY(-25px); }
+    to { transform: translateY(25px); }
+}
+
+#weatherEffect.storm {
+    background: rgba(30,35,55,.32);
+}
+
+#weatherEffect.storm.flash {
+    background: rgba(255,255,255,.72);
+}
+
+#weatherEffect.rainbow::after {
+    content: '';
+    position: absolute;
+    width: 320px;
+    height: 160px;
+    left: 50%;
+    top: 14%;
+    transform: translateX(-50%);
+    border-radius: 320px 320px 0 0;
+    border: 12px solid rgba(255,0,0,.38);
+    box-shadow: 0 -12px 0 rgba(255,165,0,.34), 0 -24px 0 rgba(255,255,0,.32), 0 -36px 0 rgba(0,190,80,.30), 0 -48px 0 rgba(50,100,255,.28), 0 -60px 0 rgba(150,60,220,.26);
+}
+
+#languageOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.58);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+}
+
+.languageBox {
+    width: min(420px, calc(100vw - 30px));
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 10px 35px rgba(0,0,0,.35);
+}
+
+.languageButtons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.languageButtons button {
+    border: none;
+    border-radius: 10px;
+    padding: 11px 18px;
+    background: #4caf50;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* =========================
+   MINCE
+========================= */
+
+#coinBox {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: white;
+    padding: 8px 13px;
+    border-radius: 9px;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+
+/* =========================
+   INVENTÁŘ
+========================= */
+
+#inventory {
+    position: fixed;
+    top: 50px;
+    left: 10px;
+    width: 220px;
+    background: rgba(255,255,255,0.97);
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    z-index: 1000;
+}
+
+.inventoryTitle {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.inventorySectionTitle {
+    font-size: 12px;
+    color: #777;
+    margin-top: 8px;
+    margin-bottom: 5px;
+}
+
+.inventoryGroup {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.inventoryItem {
+    border: 2px solid #ddd;
+    background: #fafafa;
+    border-radius: 9px;
+    min-width: 90px;
+    padding: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: 0.15s;
+}
+
+.inventoryItem:hover {
+    background: #eeeeee;
+}
+
+.inventoryItem.selected {
+    background: #65e66b;
+    border-color: #1e9d29;
+    box-shadow: 0 0 0 2px rgba(30,157,41,0.2);
+}
+
+.itemCount {
+    display: block;
+    margin-top: 3px;
+    font-weight: bold;
+}
+
+/* =========================
+   NÁZEV ZAHRADY
+========================= */
+
+#gardenTitle {
+    position: fixed;
+    top: 62px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 25px;
+    font-weight: bold;
+    color: #255d2b;
+    text-shadow: 0 1px 2px white;
+    z-index: 500;
+}
+
+/* =========================
+   OBLOHA
+========================= */
+
+#sky {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    z-index: 0;
+}
+
+.cloud {
+    position: absolute;
+    background: white;
+    border-radius: 100px;
+    opacity: 0.85;
+    filter: blur(0.2px);
+}
+
+.cloud::before,
+.cloud::after {
+    content: "";
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+}
+
+.cloud::before {
+    width: 60%;
+    height: 130%;
+    left: 15%;
+    bottom: 0;
+}
+
+.cloud::after {
+    width: 45%;
+    height: 110%;
+    right: 10%;
+    bottom: 0;
+}
+
+.cloud1 {
+    width: 150px;
+    height: 35px;
+    top: 18%;
+    left: 8%;
+}
+
+.cloud2 {
+    width: 190px;
+    height: 40px;
+    top: 30%;
+    right: 10%;
+}
+
+.cloud3 {
+    width: 120px;
+    height: 30px;
+    top: 12%;
+    right: 35%;
+}
+
+/* =========================
+   PŮDA
+========================= */
+
+#ground {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 42%;
+
+    background: transparent;
+
+    z-index: 10;
+}
+
+#ground::before {
+    content: "";
+
+    position: absolute;
+    inset: 0;
+
+    background:
+        radial-gradient(
+            ellipse at 20% 25%,
+            rgba(80,45,20,0.35),
+            transparent 35%
+        ),
+        radial-gradient(
+            ellipse at 70% 40%,
+            rgba(70,40,15,0.3),
+            transparent 35%
+        ),
+        linear-gradient(
+            #70451f,
+            #4a2913
+        );
+
+    clip-path: polygon(
+        0 12%,
+        8% 10%,
+        16% 15%,
+        25% 8%,
+        34% 13%,
+        43% 7%,
+        52% 14%,
+        61% 9%,
+        70% 15%,
+        80% 8%,
+        90% 13%,
+        100% 9%,
+        100% 100%,
+        0 100%
+    );
+
+    z-index: 1;
+
+    pointer-events: none;
+}
+
+/* =========================
+   ROSTLINY
+========================= */
+
+.plant {
+    position: absolute;
+
+    /*
+       Rostliny jsou úplně vpředu.
+    */
+    z-index: 200;
+
+    transform: translate(-50%, -100%);
+    transform-origin: bottom center;
+
+    cursor: pointer;
+    user-select: none;
+
+    pointer-events: auto;
+}
+
+.plantWeather {
+    position: absolute;
+    left: 50%;
+    top: -24px;
+    transform: translateX(-50%);
+    white-space: nowrap;
+    font-size: 14px;
+    z-index: 510;
+    pointer-events: none;
+}
+
+.plantLabel {
+    display: none;
+
+    position: absolute;
+
+    left: 50%;
+    bottom: 100%;
+
+    transform: translateX(-50%);
+
+    white-space: nowrap;
+
+    background: rgba(0,0,0,0.85);
+    color: white;
+
+    padding: 4px 7px;
+
+    border-radius: 5px;
+
+    font-size: 11px;
+
+    z-index: 500;
+}
+
+.plant:hover .plantLabel {
+    display: block;
+}
+
+/* =========================
+   MRKEV
+========================= */
+
+.carrotPlant {
+    width: 55px;
+    height: 110px;
+    position: relative;
+    transform-origin: bottom center;
+}
+
+.carrotLeaves {
+    position: absolute;
+
+    top: 0;
+    left: 50%;
+
+    width: 8px;
+    height: 42px;
+
+    background: #35a83d;
+
+    border-radius: 100%;
+
+    transform: translateX(-50%);
+}
+
+.carrotLeaves::before,
+.carrotLeaves::after {
+    content: "";
+
+    position: absolute;
+
+    width: 8px;
+    height: 42px;
+
+    background: #42b849;
+
+    border-radius: 100%;
+}
+
+.carrotLeaves::before {
+    transform: rotate(-28deg);
+    left: -12px;
+}
+
+.carrotLeaves::after {
+    transform: rotate(28deg);
+    left: 12px;
+}
+
+.carrotRoot {
+    position: absolute;
+
+    left: 50%;
+    bottom: 0;
+
+    transform: translateX(-50%);
+
+    width: 42px;
+    height: 70px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #e96820,
+            #ff8c32,
+            #df5818
+        );
+
+    border-radius:
+        50% 50% 48% 48% /
+        30% 30% 70% 70%;
+
+    clip-path: polygon(
+        8% 0,
+        92% 0,
+        100% 20%,
+        82% 62%,
+        55% 88%,
+        50% 100%,
+        45% 88%,
+        18% 62%,
+        0 20%
+    );
+}
+
+/* =========================
+   JAHODOVÝ KEŘ
+========================= */
+
+.strawberryBush {
+    position: relative;
+
+    width: 125px;
+    height: 105px;
+
+    transform-origin: bottom center;
+}
+
+.bushPart {
+    position: absolute;
+
+    background: #3f9d42;
+
+    border-radius: 50%;
+}
+
+.bush1 {
+    width: 80px;
+    height: 70px;
+    left: 5px;
+    bottom: 0;
+}
+
+.bush2 {
+    width: 80px;
+    height: 70px;
+    right: 5px;
+    bottom: 0;
+}
+
+.bush3 {
+    width: 75px;
+    height: 75px;
+    left: 25px;
+    top: 0;
+}
+
+.bush4 {
+    width: 60px;
+    height: 60px;
+    left: 45px;
+    top: 18px;
+    background: #4aaa4d;
+}
+
+/* =========================
+   JAHŮDKY
+========================= */
+
+.berry {
+    position: absolute;
+
+    width: 20px;
+    height: 25px;
+
+    background: #e52d3f;
+
+    border-radius:
+        50% 50% 55% 55%;
+
+    cursor: pointer;
+
+    z-index: 300;
+
+    box-shadow:
+        inset -3px -3px 5px rgba(0,0,0,0.18);
+
+    transition: transform 0.15s;
+}
+
+.berry::before {
+    content: "🌿";
+
+    position: absolute;
+
+    top: -10px;
+    left: 2px;
+
+    font-size: 12px;
+}
+
+.berry:hover {
+    transform: scale(1.25);
+}
+
+/* =========================
+   NOVÉ ROSTLINY
+========================= */
+.radishPlant{position:relative;width:55px;height:75px}.radishLeaf{position:absolute;width:9px;height:35px;background:#35a83d;border-radius:100%;top:0;left:50%;transform:translateX(-50%)}.radishRoot{position:absolute;width:45px;height:48px;left:50%;bottom:0;transform:translateX(-50%);background:#ef4962;border-radius:50% 50% 48% 48%}.daisyPlant{position:relative;width:75px;height:105px}.daisyStem{position:absolute;width:7px;height:75px;background:#35a83d;left:50%;bottom:0;transform:translateX(-50%)}.daisyFlower{position:absolute;width:58px;height:58px;left:50%;top:0;transform:translateX(-50%)}.daisyPetal{position:absolute;width:20px;height:30px;background:white;border-radius:50%;left:19px;top:14px;transform-origin:10px 15px}.daisyPetal:nth-child(1){transform:rotate(0deg) translateY(-12px)}.daisyPetal:nth-child(2){transform:rotate(45deg) translateY(-12px)}.daisyPetal:nth-child(3){transform:rotate(90deg) translateY(-12px)}.daisyPetal:nth-child(4){transform:rotate(135deg) translateY(-12px)}.daisyPetal:nth-child(5){transform:rotate(180deg) translateY(-12px)}.daisyPetal:nth-child(6){transform:rotate(225deg) translateY(-12px)}.daisyPetal:nth-child(7){transform:rotate(270deg) translateY(-12px)}.daisyPetal:nth-child(8){transform:rotate(315deg) translateY(-12px)}.daisyCenter{position:absolute;width:22px;height:22px;left:18px;top:18px;background:#ffd52e;border-radius:50%}.blueberryPlant{position:relative;width:125px;height:105px}.blueLeaf{position:absolute;width:70px;height:65px;background:#3f9d42;border-radius:50%}.blueLeaf:nth-child(1){left:0;bottom:0}.blueLeaf:nth-child(2){right:0;bottom:0}.blueLeaf:nth-child(3){left:28px;top:0}.blueLeaf:nth-child(4){left:42px;bottom:12px;background:#4aaa4d}.blueberry{position:absolute;width:20px;height:20px;background:#4058c8;border:2px solid #27388d;border-radius:50%;z-index:2;cursor:pointer}.tulipPlant{position:relative;width:75px;height:115px}.tulipStem{position:absolute;width:7px;height:85px;background:#35a83d;left:50%;bottom:0;transform:translateX(-50%)}.tulipLeaf{position:absolute;width:30px;height:55px;background:#3fa946;border-radius:100% 0;left:-25px;top:35px;transform:rotate(-20deg)}.tulipFlower{position:absolute;width:55px;height:55px;background:#e63e70;left:50%;top:0;transform:translateX(-50%);clip-path:polygon(0 25%,20% 0,35% 24%,50% 0,65% 24%,80% 0,100% 25%,90% 100%,10% 100%)}
+.movingPlant{cursor:grabbing !important}
+
+/* =========================
+   ZPRÁVA
+========================= */
+
+#message {
+    position: fixed;
+
+    left: 50%;
+    bottom: 20px;
+
+    transform: translateX(-50%);
+
+    background: rgba(0,0,0,0.8);
+
+    color: white;
+
+    padding: 9px 15px;
+
+    border-radius: 8px;
+
+    font-size: 14px;
+
+    opacity: 0;
+
+    transition: opacity 0.25s;
+
+    z-index: 2000;
+
+    pointer-events: none;
+}
+
+/* =========================
+   FULLSCREEN
+========================= */
+
+#fullscreenBtn {
+    position: fixed;
+
+    right: 10px;
+    bottom: 10px;
+
+    width: 42px;
+    height: 42px;
+
+    border: none;
+
+    border-radius: 10px;
+
+    background: white;
+
+    cursor: pointer;
+
+    font-size: 19px;
+
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+
+    z-index: 1000;
+}
+
+/* =========================
+   OBCHOD
+========================= */
+
+#shopOverlay {
+    position: fixed;
+
+    inset: 0;
+
+    background: rgba(0,0,0,0.55);
+
+    display: none;
+
+    align-items: center;
+    justify-content: center;
+
+    z-index: 3000;
+}
+
+.shopBox {
+    width: 430px;
+    max-width: 90%;
+
+    background: white;
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    box-shadow:
+        0 10px 40px rgba(0,0,0,0.4);
+}
+
+.shopBox h2 {
+    text-align: center;
+    margin-top: 0;
+}
+
+.shopCoins {
+    text-align: center;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.shopItem {
+    display: flex;
+
+    align-items: center;
+
+    gap: 12px;
+
+    padding: 12px;
+
+    margin-bottom: 8px;
+
+    background: #f2f2f2;
+
+    border-radius: 10px;
+}
+
+.shopEmoji {
+    font-size: 30px;
+}
+
+.shopInfo {
+    flex: 1;
+}
+
+.shopName {
+    font-weight: bold;
+}
+
+.shopPrice {
+    font-size: 13px;
+    color: #666;
+}
+
+.shopItem button {
+    border: none;
+
+    background: #4caf50;
+
+    color: white;
+
+    padding: 8px 12px;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+}
+
+.shopItem button:hover {
+    background: #3d963f;
+}
+
+.closeShop {
+    width: 100%;
+
+    border: none;
+
+    background: #ddd;
+
+    padding: 9px;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+}
+
+/* Hra zabírá celé okno prohlížeče */
+#sky, #ground {
+    width: 100vw;
+}
+</style>
+</head>
+
+<body>
+
+<!-- OBLOHA -->
+
+<div id="sky">
+    <div class="cloud cloud1"></div>
+    <div class="cloud cloud2"></div>
+    <div class="cloud cloud3"></div>
+</div>
+
+<div id="weatherEffect"></div>
+<div id="weatherBox">☀️ Den</div>
+
+<!-- HORNÍ LIŠTA -->
+
+<div id="topBar">
+
+    <button id="inventoryButton" onclick="toggleInventory()">
+        🎒 Inventář
+    </button>
+
+    <button id="shopButton" onclick="openShop()">
+        🛒 Obchod
+    </button>
+
+</div>
+
+
+<!-- MINCE -->
+
+<div id="coinBox">
+    💰 <span id="coins">1</span>
+</div>
+
+
+<!-- INVENTÁŘ -->
+
+<div id="inventory" style="display:none;">
+
+    <div class="inventoryTitle">
+        🎒 Inventář
+    </div>
+
+    <div class="inventorySectionTitle">
+        NÁSTROJE
+    </div>
+
+    <div class="inventoryGroup">
+
+        <button
+            id="tool-hand"
+            class="inventoryItem selected"
+            onclick="selectTool('hand')"
+        >
+            ✋ Ruka
+        </button>
+
+        <button
+            id="tool-shovel"
+            class="inventoryItem"
+            onclick="selectTool('shovel')"
+        >
+            🪏 Rýč
+        </button>
+
+        <button id="tool-move" class="inventoryItem" onclick="selectTool('move')">🥄 Lopatka</button>
+
+    </div>
+
+    <div class="inventorySectionTitle">
+        SEMÍNKA
+    </div>
+
+    <div class="inventoryGroup">
+
+        <button
+            id="tool-carrot"
+            class="inventoryItem"
+            onclick="selectTool('carrot')"
+        >
+            🥕 Mrkev
+
+            <span
+                class="itemCount"
+                id="carrotCount"
+            >0</span>
+
+        </button>
+
+
+        <button
+            id="tool-strawberry"
+            class="inventoryItem"
+            onclick="selectTool('strawberry')"
+        >
+            🍓 Jahoda
+
+            <span
+                class="itemCount"
+                id="strawberryCount"
+            >0</span>
+
+        </button>
+
+        <button id="tool-radish" class="inventoryItem" onclick="selectTool('radish')">🔴 Ředkvička <span class="itemCount" id="radishCount">0</span></button>
+        <button id="tool-daisy" class="inventoryItem" onclick="selectTool('daisy')">🌼 Kopretina <span class="itemCount" id="daisyCount">0</span></button>
+        <button id="tool-blueberry" class="inventoryItem" onclick="selectTool('blueberry')">🫐 Borůvka <span class="itemCount" id="blueberryCount">0</span></button>
+        <button id="tool-tulip" class="inventoryItem" onclick="selectTool('tulip')">🌷 Tulipán <span class="itemCount" id="tulipCount">0</span></button>
+
+    </div>
+
+</div>
+
+
+<!-- PŮDA -->
+
+<div id="ground"></div>
+
+
+<!-- ZPRÁVA -->
+
+<div id="message"></div>
+
+
+<!-- FULLSCREEN -->
+
+<button
+    id="fullscreenBtn"
+    onclick="toggleFullscreen()"
+    title="Celá obrazovka"
+>
+    ⛶
+</button>
+
+
+<!-- OBCHOD -->
+
+<div id="shopOverlay">
+
+    <div class="shopBox">
+
+        <h2>🛒 Obchod</h2>
+
+        <div class="shopCoins">
+            💰 Máš
+            <span id="shopCoins">1</span>
+            mincí
+        </div>
+
+
+        <!-- MRKEV -->
+
+        <div class="shopItem">
+
+            <div class="shopEmoji">
+                🥕
+            </div>
+
+            <div class="shopInfo">
+
+                <div class="shopName">
+                    Semínko mrkve
+                </div>
+
+                <div class="shopPrice">
+                    Cena: 1 💰
+                </div>
+
+            </div>
+
+            <button
+                onclick="buyCarrot()"
+            >
+                Koupit
+            </button>
+
+        </div>
+
+
+        <!-- JAHODA -->
+
+        <div class="shopItem">
+
+            <div class="shopEmoji">
+                🍓
+            </div>
+
+            <div class="shopInfo">
+
+                <div class="shopName">
+                    Semínko divoké jahody
+                </div>
+
+                <div class="shopPrice">
+                    Cena: 20 💰
+                </div>
+
+            </div>
+
+            <button
+                onclick="buyStrawberry()"
+            >
+                Koupit
+            </button>
+
+        </div>
+
+
+        <div class="shopItem"><div class="shopEmoji">🔴</div><div class="shopInfo"><div class="shopName">Semínko ředkvičky</div><div class="shopPrice">Cena: 140 💰</div></div><button onclick="buySeed('radish')">Koupit</button></div>
+        <div class="shopItem"><div class="shopEmoji">🌼</div><div class="shopInfo"><div class="shopName">Semínko kopretiny</div><div class="shopPrice">Cena: 1 000 💰</div></div><button onclick="buySeed('daisy')">Koupit</button></div>
+        <div class="shopItem"><div class="shopEmoji">🫐</div><div class="shopInfo"><div class="shopName">Semínko borůvky</div><div class="shopPrice">Cena: 2 000 💰</div></div><button onclick="buySeed('blueberry')">Koupit</button></div>
+        <div class="shopItem"><div class="shopEmoji">🌷</div><div class="shopInfo"><div class="shopName">Semínko tulipánu</div><div class="shopPrice">Cena: 4 000 💰</div></div><button onclick="buySeed('tulip')">Koupit</button></div>
+
+        <button
+            class="closeShop"
+            onclick="closeShop()"
+        >
+            🌱 Zpět do zahrady
+        </button>
+
+    </div>
+
+</div>
+
+<div id="languageOverlay" style="display:none;">
+    <div class="languageBox">
+        <h2 id="languageTitle">🌍 Choose a language</h2>
+        <div id="languageSubtitle">Choose the game language:</div>
+        <div class="languageButtons">
+            <button onclick="chooseLanguage('en')">🇬🇧 English</button>
+            <button onclick="chooseLanguage('cs')">🇨🇿 Čeština</button>
+            <button onclick="chooseLanguage('de')">🇩🇪 Deutsch</button>
+        </div>
+    </div>
+</div>
+
+<script>
+
+/* =====================================================
+   HRA
+===================================================== */
+
+let game = {
+
+    language: null,
+    coins: 1,
+
+    carrotSeeds: 0,
+
+    strawberrySeeds: 0,
+    radishSeeds: 0,
+    daisySeeds: 0,
+    blueberrySeeds: 0,
+    tulipSeeds: 0,
+
+    plants: []
+
+};
+
+let selectedTool = "hand";
+
+const SAVE_KEY =
+    "mojeZahradaSave";
+
+
+/* =====================================================
+   UKLÁDÁNÍ
+===================================================== */
+
+function saveGame() {
+
+    try {
+
+        localStorage.setItem(
+            SAVE_KEY,
+            JSON.stringify(game)
+        );
+
+    } catch(error) {
+
+        console.log(
+            "Uložení se nepodařilo:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   NAČTENÍ
+===================================================== */
+
+function loadGame() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(
+                SAVE_KEY
+            );
+
+        if (!saved) {
+            return;
+        }
+
+        const loaded =
+            JSON.parse(saved);
+
+        game = {
+
+            language: loaded.language || null,
+            coins:
+                Number.isFinite(
+                    loaded.coins
+                )
+                    ? loaded.coins
+                    : 1,
+
+            carrotSeeds:
+                Number.isFinite(
+                    loaded.carrotSeeds
+                )
+                    ? loaded.carrotSeeds
+                    : 0,
+
+            strawberrySeeds:
+                Number.isFinite(
+                    loaded.strawberrySeeds
+                )
+                    ? loaded.strawberrySeeds
+                    : 0,
+
+            radishSeeds: Number.isFinite(loaded.radishSeeds) ? loaded.radishSeeds : 0,
+            daisySeeds: Number.isFinite(loaded.daisySeeds) ? loaded.daisySeeds : 0,
+            blueberrySeeds: Number.isFinite(loaded.blueberrySeeds) ? loaded.blueberrySeeds : 0,
+            tulipSeeds: Number.isFinite(loaded.tulipSeeds) ? loaded.tulipSeeds : 0,
+
+            plants:
+                Array.isArray(
+                    loaded.plants
+                )
+                    ? loaded.plants
+                    : []
+
+        };
+        game.radishSeeds=Number.isFinite(game.radishSeeds)?game.radishSeeds:0;
+        game.daisySeeds=Number.isFinite(game.daisySeeds)?game.daisySeeds:0;
+        game.blueberrySeeds=Number.isFinite(game.blueberrySeeds)?game.blueberrySeeds:0;
+        game.tulipSeeds=Number.isFinite(game.tulipSeeds)?game.tulipSeeds:0;
+        game.plants.forEach(p=>{
+            if(!Array.isArray(p.fruits))p.fruits=[];
+            if(!p.weatherEffects)p.weatherEffects={rain:false,storm:false,rainbow:false};
+        });
+
+    } catch(error) {
+
+        console.log(
+            "Načtení se nepodařilo:",
+            error
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   MINCE
+===================================================== */
+
+function updateCoins() {
+
+    game.coins =
+        Math.round(
+            game.coins
+        );
+
+    document.getElementById(
+        "coins"
+    ).textContent =
+        game.coins;
+
+    document.getElementById(
+        "shopCoins"
+    ).textContent =
+        game.coins;
+
+}
+
+
+/* =====================================================
+   INVENTÁŘ
+===================================================== */
+
+function updateInventory() {
+
+    document.getElementById(
+        "carrotCount"
+    ).textContent =
+        game.carrotSeeds;
+
+    document.getElementById(
+        "strawberryCount"
+    ).textContent =
+        game.strawberrySeeds;
+    document.getElementById("radishCount").textContent = game.radishSeeds;
+    document.getElementById("daisyCount").textContent = game.daisySeeds;
+    document.getElementById("blueberryCount").textContent = game.blueberrySeeds;
+    document.getElementById("tulipCount").textContent = game.tulipSeeds;
+
+    updateSelectedTool();
+
+}
+
+
+function toggleInventory() {
+
+    const inventory =
+        document.getElementById(
+            "inventory"
+        );
+
+    if (
+        inventory.style.display ===
+        "none" ||
+        inventory.style.display === ""
+    ) {
+
+        inventory.style.display =
+            "block";
+
+    } else {
+
+        inventory.style.display =
+            "none";
+
+    }
+
+}
+
+
+/* =====================================================
+   VÝBĚR NÁSTROJE
+===================================================== */
+
+function selectTool(tool) {
+
+    if (
+        selectedTool === tool
+    ) {
+
+        selectedTool = null;
+
+    } else {
+
+        selectedTool = tool;
+
+    }
+
+    updateSelectedTool();
+
+}
+
+
+function updateSelectedTool() {
+
+    const tools = [
+        "hand", "shovel", "move",
+        "carrot", "strawberry", "radish", "daisy", "blueberry", "tulip"
+    ];
+
+    tools.forEach(tool => {
+
+        const element =
+            document.getElementById(
+                "tool-" + tool
+            );
+
+        if (!element) {
+            return;
+        }
+
+        element.classList.toggle(
+            "selected",
+            selectedTool === tool
+        );
+
+    });
+
+}
+
+
+/* =====================================================
+   NÁHODNÁ VELIKOST ROSTLINY
+===================================================== */
+
+function getRandomSize() {
+
+    /*
+       Přibližně 1 z 20 rostlin
+       bude obrovská 10–30×.
+    */
+
+    if (
+        Math.floor(
+            Math.random() * 20
+        ) === 0
+    ) {
+
+        return Number(
+            (
+                10 +
+                Math.random() * 20
+            ).toFixed(1)
+        );
+
+    }
+
+    const r =
+        Math.random();
+
+
+    if (r < 0.25) {
+
+        return 1;
+
+    } else if (r < 0.60) {
+
+        return Number(
+            (
+                1 +
+                Math.random() * 1.5
+            ).toFixed(1)
+        );
+
+    } else if (r < 0.85) {
+
+        return Number(
+            (
+                2.5 +
+                Math.random() * 2.5
+            ).toFixed(1)
+        );
+
+    } else if (r < 0.96) {
+
+        return Number(
+            (
+                5 +
+                Math.random() * 3
+            ).toFixed(1)
+        );
+
+    } else {
+
+        return Number(
+            (
+                8 +
+                Math.random() * 2
+            ).toFixed(1)
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   VELIKOST JAHŮDKY
+===================================================== */
+
+function getBerrySize() {
+
+    if (
+        Math.random() < 0.05
+    ) {
+
+        return Number(
+            (
+                5 +
+                Math.random() * 5
+            ).toFixed(1)
+        );
+
+    }
+
+    return Number(
+        (
+            1 +
+            Math.random() * 3
+        ).toFixed(1)
+    );
+
+}
+
+
+/* =====================================================
+   KLIK NA PŮDU
+===================================================== */
+
+document
+    .getElementById("ground")
+    .addEventListener(
+        "click",
+        function(event) {
+
+            if (
+                selectedTool !== "carrot" &&
+                selectedTool !== "strawberry" &&
+                selectedTool !== "radish" &&
+                selectedTool !== "daisy" &&
+                selectedTool !== "blueberry" &&
+                selectedTool !== "tulip"
+            ) {
+
+                return;
+
+            }
+
+            plantSeed(
+                selectedTool,
+                event
+            );
+
+        }
+    );
+
+
+/* =====================================================
+   ZASAZENÍ
+===================================================== */
+
+function plantSeed(
+    type,
+    event
+) {
+
+    const seedKey = type + "Seeds";
+    if (!Number.isFinite(game[seedKey]) || game[seedKey] <= 0) {
+        showMessage(tr("Nemáš žádné semínko této rostliny!","You do not have this seed!","Du hast diesen Samen nicht!"));
+        return;
+    }
+
+    const ground =
+        document.getElementById(
+            "ground"
+        );
+
+    const rect =
+        ground.getBoundingClientRect();
+
+
+    const x =
+        (
+            (
+                event.clientX -
+                rect.left
+            ) /
+            rect.width
+        ) * 100;
+
+
+    const y =
+        (
+            (
+                event.clientY -
+                rect.top
+            ) /
+            rect.height
+        ) * 100;
+
+
+    const tooClose =
+        game.plants.some(
+            plant => {
+
+                const dx =
+                    plant.x - x;
+
+                const dy =
+                    plant.y - y;
+
+                return (
+                    Math.sqrt(
+                        dx * dx +
+                        dy * dy
+                    ) < 3
+                );
+
+            }
+        );
+
+
+    if (tooClose) {
+
+        showMessage(tr("Tady už je rostlina příliš blízko!","There is already a plant too close here!","Hier ist bereits eine Pflanze zu nah!"));
+
+        return;
+
+    }
+
+
+    const plant = {
+
+        id:
+            Date.now() +
+            Math.random(),
+
+        type: type,
+
+        x: x,
+
+        y: y,
+
+        plantedAt:
+            Date.now(),
+
+        size:
+            getRandomSize(),
+
+        grown: false,
+
+        fruits: [],
+
+        lastFruitAt: null,
+        weatherEffects: {rain:false, storm:false, rainbow:false}
+
+    };
+
+
+    game.plants.push(
+        plant
+    );
+
+
+    game[seedKey]--;
+
+    const emojis = { carrot:"🥕", strawberry:"🍓", radish:"🔴", daisy:"🌼", blueberry:"🫐", tulip:"🌷" };
+    showMessage(tr(emojis[type]+" "+plantName(type)+" zasazena!", emojis[type]+" "+plantName(type)+" planted!", emojis[type]+" "+plantName(type)+" gepflanzt!"));
+    updateInventory();
+
+    saveGame();
+
+    renderPlants();
+
+}
+
+
+/* =====================================================
+   RŮST ROSTLIN
+===================================================== */
+
+function processPlants() {
+    const now = Date.now();
+    const growthTimes = {carrot:10, strawberry:15, radish:20, daisy:30, blueberry:70, tulip:45};
+    const repeatTypes = ["strawberry", "blueberry"];
+    game.plants.forEach(plant => {
+        const age = (now - plant.plantedAt) / 1000;
+        const growth = growthTimes[plant.type] || 60;
+
+        // Kopretina je JEDNORÁZOVÁ rostlina – nikdy nevytváří další květy.
+        if (plant.type === "daisy") {
+            plant.lastFruitAt = null;
+        }
+
+        if (!plant.grown && age >= growth) {
+            plant.grown = true;
+            if (repeatTypes.includes(plant.type)) plant.lastFruitAt = now;
+        }
+
+        if (plant.grown && repeatTypes.includes(plant.type)) {
+            if (!plant.lastFruitAt) plant.lastFruitAt = now;
+            const fruitInterval = plant.type === "blueberry" ? 8 : 20;
+            const seconds = (now - plant.lastFruitAt) / 1000;
+            if (seconds >= fruitInterval) {
+                addRepeatFruits(plant, Math.floor(seconds / fruitInterval));
+                plant.lastFruitAt = now;
+            }
+        }
+    });
+}
+
+/* =====================================================
+   JAHŮDKY
+===================================================== */
+
+function addStrawberries(plant, amount) { addRepeatFruits(plant, amount); }
+function addRepeatFruits(plant, amount) {
+    if (!plant.fruits) plant.fruits=[];
+    const maxFruits=Math.max(1,Math.floor(plant.size*2));
+    for(let i=0;i<amount && plant.fruits.length<maxFruits;i++) {
+        plant.fruits.push({id:Date.now()+Math.random(),size:getBerrySize(),x:15+Math.random()*70,y:20+Math.random()*60});
+    }
+}
+
+/* =====================================================
+   VYKRESLENÍ
+===================================================== */
+
+function renderPlants() {
+
+    document
+        .querySelectorAll(".plant")
+        .forEach(
+            element =>
+                element.remove()
+        );
+
+
+    game.plants.forEach(
+        renderPlant
+    );
+
+}
+
+
+function plantName(type) {
+    const n={
+        carrot:{cs:"Mrkev",en:"Carrot",de:"Karotte"},
+        strawberry:{cs:"Jahoda",en:"Strawberry",de:"Erdbeere"},
+        radish:{cs:"Ředkvička",en:"Radish",de:"Radieschen"},
+        daisy:{cs:"Kopretina",en:"Daisy",de:"Gänseblümchen"},
+        blueberry:{cs:"Borůvka",en:"Blueberry",de:"Blaubeere"},
+        tulip:{cs:"Tulipán",en:"Tulip",de:"Tulpe"}
+    };
+    return n[type]?.[game.language||"cs"] || type;
+}
+
+function growingText() {
+    return {cs:"Roste...",en:"Growing...",de:"Wächst..."}[game.language||"cs"];
+}
+
+/* =====================================================
+   VYKRESLENÍ ROSTLINY
+===================================================== */
+
+function weatherBadges(plant) {
+    const e=plant.weatherEffects || {};
+    let out="";
+    if(e.rain) out += "🌧️×2 ";
+    if(e.storm) out += "⛈️×10 ";
+    if(e.rainbow) out += "🌈×10 ";
+    return out ? `<div class="plantWeather">${out}</div>` : "";
+}
+
+function renderPlant(
+    plant
+) {
+
+    const ground =
+        document.getElementById(
+            "ground"
+        );
+
+
+    const element =
+        document.createElement(
+            "div"
+        );
+
+
+    element.className =
+        "plant";
+
+
+    element.style.left =
+        plant.x + "%";
+
+
+    element.style.top =
+        plant.y + "%";
+
+
+    element.addEventListener("pointerdown", function(event) {
+        if (selectedTool !== "move") return;
+        event.preventDefault(); event.stopPropagation();
+        const ground=document.getElementById("ground");
+        element.classList.add("movingPlant");
+        function move(ev){
+            const r=ground.getBoundingClientRect();
+            let x=((ev.clientX-r.left)/r.width)*100, y=((ev.clientY-r.top)/r.height)*100;
+            plant.x=Math.max(2,Math.min(98,x)); plant.y=Math.max(8,Math.min(98,y));
+            element.style.left=plant.x+"%"; element.style.top=plant.y+"%";
+        }
+        function up(){
+            document.removeEventListener("pointermove",move); document.removeEventListener("pointerup",up);
+            element.classList.remove("movingPlant"); saveGame(); renderPlants(); showMessage(tr("🥄 Rostlina přemístěna.","🥄 Plant moved.","🥄 Pflanze verschoben."));
+        }
+        document.addEventListener("pointermove",move); document.addEventListener("pointerup",up);
+    });
+
+    element.addEventListener(
+        "click",
+        function(event) {
+
+            event.stopPropagation();
+            if (selectedTool === "move") return;
+
+            /* RÝČ */
+
+            if (
+                selectedTool ===
+                "shovel"
+            ) {
+
+                removePlant(
+                    plant.id
+                );
+
+                showMessage(tr("🪏 Rostlina odstraněna.","🪏 Plant removed.","🪏 Pflanze entfernt."));
+
+                return;
+
+            }
+
+
+            /* MRKEV – PRODEJ */
+
+            if (
+                plant.type ===
+                    "carrot" &&
+                plant.grown &&
+                selectedTool ===
+                    "hand"
+            ) {
+
+                sellCarrot(
+                    plant.id
+                );
+
+                return;
+
+            }
+
+            if ((plant.type === "radish" || plant.type === "daisy" || plant.type === "tulip") && plant.grown && selectedTool === "hand") {
+                sellSingleNewPlant(plant);
+                return;
+            }
+
+        }
+    );
+
+
+    /* =================================================
+       MRKEV
+    ================================================= */
+
+    if (
+        plant.type ===
+        "carrot"
+    ) {
+
+        if (!plant.grown) {
+
+            element.innerHTML = `
+
+                <div
+                    class="carrotPlant"
+                    style="
+                        transform:
+                        scale(0.45);
+                    "
+                >
+
+                    <div
+                        class="carrotLeaves"
+                    ></div>
+
+                    <div
+                        class="carrotRoot"
+                        style="
+                            height:25px;
+                            width:20px;
+                        "
+                    ></div>
+
+                </div>
+
+                <div class="plantLabel">
+                    🥕 ${growingText()}
+                </div>
+            `;
+
+        } else {
+
+            const visualScale =
+                Math.min(
+                    3.5,
+                    0.65 +
+                    plant.size * 0.28
+                );
+
+
+            /*
+               1× = 3 mince
+            */
+
+            const price =
+                Math.round(
+                    3 * plant.size
+                );
+
+
+            element.innerHTML = `
+
+                <div
+                    class="carrotPlant"
+                    style="
+                        transform:
+                        scale(${visualScale});
+                    "
+                >
+
+                    <div
+                        class="carrotLeaves"
+                    ></div>
+
+                    <div
+                        class="carrotRoot"
+                    ></div>
+
+                </div>
+
+                <div class="plantLabel">
+                    🥕 ${plantName("carrot")} ${plant.size}×
+                    · 💰 ${price}
+                </div>
+
+            `;
+
+        }
+
+    }
+
+
+    if (plant.type === "radish") {
+        if (!plant.grown) element.innerHTML=`<div class="radishPlant" style="transform:scale(.45)"><div class="radishLeaf"></div><div class="radishRoot" style="width:20px;height:25px"></div></div><div class="plantLabel">🔴 ${growingText()}</div>`;
+        else { const s=Math.min(3.5,.65+plant.size*.28); element.innerHTML=`<div class="radishPlant" style="transform:scale(${s})"><div class="radishLeaf"></div><div class="radishRoot"></div></div><div class="plantLabel">🔴 ${plantName("radish")} ${plant.size}× · 💰 ${Math.round(350*plant.size*getWeatherMultiplier(plant))}</div>`; }
+    }
+    if (plant.type === "tulip") {
+        if (!plant.grown) element.innerHTML=`<div class="tulipPlant" style="transform:scale(.45)"><div class="tulipStem"></div></div><div class="plantLabel">🌷 ${growingText()}</div>`;
+        else { const s=Math.min(3.5,.65+plant.size*.28); element.innerHTML=`<div class="tulipPlant" style="transform:scale(${s})"><div class="tulipStem"><div class="tulipLeaf"></div><div class="tulipFlower"></div></div></div><div class="plantLabel">🌷 ${plantName("tulip")} ${plant.size}× · 💰 ${Math.round(5000*plant.size*getWeatherMultiplier(plant))}</div>`; }
+    }
+    if (plant.type === "daisy") {
+        if (!plant.grown) {
+            element.innerHTML=`<div class="daisyPlant" style="transform:scale(.45)"><div class="daisyStem"></div></div><div class="plantLabel">🌼 ${growingText()} 30 s</div>`;
+        } else {
+            const s=Math.min(3.5,.65+plant.size*.20);
+            element.innerHTML=`<div class="daisyPlant" style="transform:scale(${s})"><div class="daisyStem"></div><div class="daisyFlower"><div class="daisyPetal"></div><div class="daisyPetal"></div><div class="daisyPetal"></div><div class="daisyPetal"></div><div class="daisyPetal"></div><div class="daisyPetal"></div><div class="daisyPetal"></div><div class="daisyPetal"></div><div class="daisyCenter"></div></div></div><div class="plantLabel">🌼 ${plantName("daisy")} ${plant.size}× · 💰 ${Math.round(1200*plant.size*getWeatherMultiplier(plant))}</div>`;
+        }
+    }
+    if (plant.type === "blueberry") {
+        if (!plant.grown) element.innerHTML=`<div class="blueberryPlant" style="transform:scale(.45)"><div class="blueLeaf"></div></div><div class="plantLabel">🫐 ${growingText()} 1 min 10 s</div>`;
+        else { const s=Math.min(3.5,.7+plant.size*.20); const d=document.createElement("div");d.className="blueberryPlant";d.style.transform=`scale(${s})`;d.innerHTML=`<div class="blueLeaf"></div><div class="blueLeaf"></div><div class="blueLeaf"></div><div class="blueLeaf"></div>`;(plant.fruits||[]).forEach(f=>{const x=document.createElement("div");x.className="blueberry";x.style.left=f.x+"%";x.style.top=f.y+"%";x.style.transform=`scale(${Math.min(3,.8+f.size*.35)})`;x.onclick=e=>{e.stopPropagation();if(selectedTool==="shovel")removePlant(plant.id);else if(selectedTool==="hand")sellBerry(plant.id,f.id)};d.appendChild(x)});element.appendChild(d);element.insertAdjacentHTML("beforeend",`<div class="plantLabel">🫐 ${plantName("blueberry")} ${plant.size}× · ${(plant.fruits||[]).length} ${(game.language==="en"?"blueberries":game.language==="de"?"Blaubeeren":"borůvek")}</div>`); }
+    }
+
+    /* =================================================
+       JAHODOVÝ KEŘ
+    ================================================= */
+
+    if (
+        plant.type ===
+        "strawberry"
+    ) {
+
+        if (!plant.grown) {
+
+            element.innerHTML = `
+
+                <div
+                    style="
+                        font-size:38px;
+                    "
+                >
+                    🌱
+                </div>
+
+                <div class="plantLabel">
+                    🍓 Roste... 15 s
+                </div>
+
+            `;
+
+        } else {
+
+            const visualScale =
+                Math.min(
+                    3.5,
+                    0.7 +
+                    plant.size * 0.20
+                );
+
+
+            const bush =
+                document.createElement(
+                    "div"
+                );
+
+
+            bush.className =
+                "strawberryBush";
+
+
+            bush.style.transform =
+                `scale(${visualScale})`;
+
+
+            bush.innerHTML = `
+
+                <div class="bushPart bush1"></div>
+                <div class="bushPart bush2"></div>
+                <div class="bushPart bush3"></div>
+                <div class="bushPart bush4"></div>
+
+            `;
+
+
+            (plant.fruits || [])
+                .forEach(
+                    berry => {
+
+                        const berryElement =
+                            document.createElement(
+                                "div"
+                            );
+
+
+                        berryElement.className =
+                            "berry";
+
+
+                        berryElement.style.left =
+                            berry.x + "%";
+
+
+                        berryElement.style.top =
+                            berry.y + "%";
+
+
+                        berryElement.style.transform =
+                            `scale(${Math.min(
+                                3,
+                                0.8 +
+                                berry.size * 0.35
+                            )})`;
+
+
+                        berryElement.title =
+                            `Jahůdka ${berry.size}×`;
+
+
+                        berryElement.addEventListener(
+                            "click",
+                            function(event) {
+
+                                event.stopPropagation();
+
+
+                                if (
+                                    selectedTool ===
+                                    "shovel"
+                                ) {
+
+                                    removePlant(
+                                        plant.id
+                                    );
+
+                                    showMessage(tr("🪏 Keř odstraněn.","🪏 Bush removed.","🪏 Busch entfernt."));
+
+                                    return;
+
+                                }
+
+
+                                if (
+                                    selectedTool ===
+                                    "hand"
+                                ) {
+
+                                    sellBerry(
+                                        plant.id,
+                                        berry.id
+                                    );
+
+                                }
+
+                            }
+                        );
+
+
+                        bush.appendChild(
+                            berryElement
+                        );
+
+                    }
+                );
+
+
+            element.appendChild(
+                bush
+            );
+
+
+            const fruitCount =
+                (
+                    plant.fruits ||
+                    []
+                ).length;
+
+
+            element.insertAdjacentHTML(
+                "beforeend",
+                `
+                <div class="plantLabel">
+                    🍓 ${plantName("strawberry")} ${plant.size}×
+                    · ${fruitCount} jahod
+                </div>
+                `
+            );
+
+        }
+
+    }
+
+
+    element.insertAdjacentHTML("beforeend", weatherBadges(plant));
+
+    ground.appendChild(
+        element
+    );
+
+}
+
+
+/* =====================================================
+   POČASÍ A HODNOTA ROSTLIN
+===================================================== */
+
+let currentWeather = "day";
+let weatherTimers = {rain:null, storm:null, rainbow:null};
+let weatherEndTimer = null;
+
+const weatherInfo = {
+    day: {emoji:"☀️", cs:"Den", en:"Day", de:"Tag", multiplier:1},
+    night: {emoji:"🌙", cs:"Noc", en:"Night", de:"Nacht", multiplier:1},
+    rain: {emoji:"🌧️", cs:"Déšť", en:"Rain", de:"Regen", multiplier:2},
+    storm: {emoji:"⛈️", cs:"Bouřka", en:"Storm", de:"Gewitter", multiplier:10},
+    rainbow: {emoji:"🌈", cs:"Duha", en:"Rainbow", de:"Regenbogen", multiplier:10}
+};
+
+function getWeatherMultiplier(plant) {
+    const e = plant.weatherEffects || {};
+    let m = 1;
+    if (e.rain) m *= 2;
+    if (e.storm) m *= 10;
+    if (e.rainbow) m *= 10;
+    return m;
+}
+
+function updateWeatherBox() {
+    const info = weatherInfo[currentWeather] || weatherInfo.day;
+    const lang = game.language || "cs";
+    document.getElementById("weatherBox").textContent = info.emoji + " " + info[lang];
+}
+
+function setWeatherVisual(type) {
+    const el = document.getElementById("weatherEffect");
+    el.className = type;
+    document.body.className = type;
+    if (type === "storm") {
+        el.classList.add("flash");
+        setTimeout(() => {
+            if (currentWeather === "storm") el.classList.remove("flash");
+        }, 140);
+    }
+}
+
+function chooseWeatherPlants(type, min, max) {
+    const available = game.plants.filter(p => p.grown);
+    if (!available.length) return;
+
+    const shuffled = [...available].sort(() => Math.random() - 0.5);
+    const wanted = min + Math.floor(Math.random() * (max - min + 1));
+    const count = Math.min(available.length, wanted);
+
+    shuffled.slice(0, count).forEach(p => {
+        if (!p.weatherEffects) p.weatherEffects = {rain:false, storm:false, rainbow:false};
+        p.weatherEffects[type] = true;
+    });
+
+    saveGame();
+    renderPlants();
+}
+
+function startSpecialWeather(type, duration, minTargets, maxTargets) {
+    currentWeather = type;
+    chooseWeatherPlants(type, minTargets, maxTargets);
+    setWeatherVisual(type);
+    updateWeatherBox();
+
+    if (weatherEndTimer) clearTimeout(weatherEndTimer);
+    weatherEndTimer = setTimeout(() => {
+        currentWeather = getDayNight();
+        setWeatherVisual(currentWeather);
+        updateWeatherBox();
+    }, duration * 1000);
+}
+
+function scheduleSpecialWeather(type, minMinutes, maxMinutes, durationSeconds, minTargets, maxTargets) {
+    const delay = (minMinutes + Math.random() * (maxMinutes - minMinutes)) * 60 * 1000;
+    weatherTimers[type] = setTimeout(() => {
+        startSpecialWeather(type, durationSeconds, minTargets, maxTargets);
+        scheduleSpecialWeather(type, minMinutes, maxMinutes, durationSeconds, minTargets, maxTargets);
+    }, delay);
+}
+
+function getDayNight() {
+    // Používá skutečné místní časové pásmo počítače. Pro Prahu/ČR a Londýn
+    // počítáme přibližný skutečný východ a západ slunce podle data.
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Prague";
+    const london = zone === "Europe/London";
+    const lat = london ? 51.5074 : 50.0755;
+    const lon = london ? -0.1278 : 14.4378;
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((now - startOfYear) / 86400000) + 1;
+    const gamma = 2 * Math.PI / 365 * (dayOfYear - 1 + (now.getHours() - 12) / 24);
+    const eqtime = 229.18 * (0.000075 + 0.001868*Math.cos(gamma) - 0.032077*Math.sin(gamma) - 0.014615*Math.cos(2*gamma) - 0.040849*Math.sin(2*gamma));
+    const decl = 0.006918 - 0.399912*Math.cos(gamma) + 0.070257*Math.sin(gamma) - 0.006758*Math.cos(2*gamma) + 0.000907*Math.sin(2*gamma) - 0.002697*Math.cos(3*gamma) + 0.00148*Math.sin(3*gamma);
+    const latR = lat * Math.PI / 180;
+    const zenith = 90.833 * Math.PI / 180;
+    const cosH = (Math.cos(zenith) - Math.sin(latR)*Math.sin(decl)) / (Math.cos(latR)*Math.cos(decl));
+    const h = Math.acos(Math.max(-1, Math.min(1, cosH))) * 180 / Math.PI;
+    const offsetHours = -now.getTimezoneOffset() / 60;
+    const solarNoon = 12 + offsetHours - lon/15 - eqtime/60;
+    const sunrise = solarNoon - h/15;
+    const sunset = solarNoon + h/15;
+    const hours = now.getHours() + now.getMinutes()/60 + now.getSeconds()/3600;
+    return hours >= sunrise && hours < sunset ? "day" : "night";
+}
+
+function startWeatherSystem() {
+    currentWeather = getDayNight();
+    setWeatherVisual(currentWeather);
+    updateWeatherBox();
+
+    // Déšť: přibližně každých 8 min → náhodně 6–10 min, 1 min.
+    scheduleSpecialWeather("rain", 6, 10, 60, 2, 8);
+    // Bouřka: přibližně každých 15 min → náhodně 12–18 min, 15 s.
+    scheduleSpecialWeather("storm", 12, 18, 15, 1, 1);
+    // Duha: přibližně každých 30 min → náhodně 25–35 min, 1 min.
+    scheduleSpecialWeather("rainbow", 25, 35, 60, 1, 2);
+
+    setInterval(() => {
+        if (currentWeather !== "rain" && currentWeather !== "storm" && currentWeather !== "rainbow") {
+            const next = getDayNight();
+            if (next !== currentWeather) {
+                currentWeather = next;
+                setWeatherVisual(currentWeather);
+                updateWeatherBox();
+            }
+        }
+    }, 30000);
+}
+
+/* =====================================================
+   PRODEJ MRKVE
+===================================================== */
+
+function sellCarrot(
+    plantId
+) {
+
+    const index =
+        game.plants.findIndex(
+            plant =>
+                plant.id === plantId
+        );
+
+
+    if (index === -1) {
+        return;
+    }
+
+
+    const plant =
+        game.plants[index];
+
+
+    /*
+       1,0× = 3 mince
+       2,0× = 6 mincí
+       5,0× = 15 mincí
+       10,0× = 30 mincí
+       30,0× = 90 mincí
+    */
+
+    const price =
+        Math.round(
+            3 * plant.size * getWeatherMultiplier(plant)
+        );
+
+
+    game.coins +=
+        price;
+
+
+    game.plants.splice(
+        index,
+        1
+    );
+
+
+    updateCoins();
+
+    saveGame();
+
+    renderPlants();
+
+
+    showMessage(tr(`🥕 Prodáno za ${price} 💰`,`🥕 Sold for ${price} 💰`,`🥕 Für ${price} 💰 verkauft`));
+
+}
+
+
+/* =====================================================
+   PRODEJ JAHŮDKY
+===================================================== */
+
+function sellBerry(plantId, berryId) {
+    const plant=game.plants.find(p=>p.id===plantId); if(!plant)return;
+    const i=(plant.fruits||[]).findIndex(b=>b.id===berryId); if(i===-1)return;
+    const fruit=plant.fruits[i]; const prices={strawberry:12,blueberry:500};
+    const price=Math.round((prices[plant.type]||0)*fruit.size*getWeatherMultiplier(plant)); game.coins+=price; plant.fruits.splice(i,1); updateCoins(); saveGame(); renderPlants(); showMessage(tr(`💰 Prodáno za ${price}`,`💰 Sold for ${price}`,`💰 Für ${price} verkauft`));
+}
+function sellSingleNewPlant(plant) {
+    if (!plant || !plant.grown) return;
+    const prices = {radish:350, daisy:1200, tulip:5000};
+    if (!prices[plant.type]) return;
+
+    const price = Math.round(prices[plant.type] * plant.size * getWeatherMultiplier(plant));
+    game.coins = Math.round(game.coins + price);
+    game.plants = game.plants.filter(p => p.id !== plant.id);
+    updateCoins();
+    saveGame();
+    renderPlants();
+    showMessage(tr(`💰 Prodáno za ${price}`, `💰 Sold for ${price}`, `💰 Für ${price} verkauft`));
+}
+
+/* =====================================================
+   RÝČ
+===================================================== */
+
+function removePlant(
+    plantId
+) {
+
+    game.plants =
+        game.plants.filter(
+            plant =>
+                plant.id !== plantId
+        );
+
+
+    saveGame();
+
+    renderPlants();
+
+}
+
+
+/* =====================================================
+   OBCHOD
+===================================================== */
+
+function openShop() {
+
+    document.getElementById(
+        "shopOverlay"
+    ).style.display =
+        "flex";
+
+    updateCoins();
+
+}
+
+
+function closeShop() {
+
+    document.getElementById(
+        "shopOverlay"
+    ).style.display =
+        "none";
+
+}
+
+
+/* =====================================================
+   KOUPĚ NOVÝCH SEMÍNEK
+===================================================== */
+function buySeed(type){
+    const prices={radish:140,daisy:1000,blueberry:2000,tulip:4000}; const key=type+"Seeds"; const price=prices[type];
+    if(!price || game.coins<price){showMessage(tr("Nemáš dost mincí!","Not enough coins!","Nicht genug Münzen!"));return;}
+    game.coins-=price; game[key]++; updateCoins(); updateInventory(); saveGame(); showMessage(tr("Semínko koupeno!","Seed bought!","Samen gekauft!"));
+}
+
+/* =====================================================
+   KOUPĚ MRKVE
+===================================================== */
+
+function buyCarrot() {
+
+    const price = 1;
+
+
+    if (
+        game.coins < price
+    ) {
+
+        showMessage(tr("Nemáš dost mincí!","Not enough coins!","Nicht genug Münzen!"));
+
+        return;
+
+    }
+
+
+    game.coins -=
+        price;
+
+    game.carrotSeeds++;
+
+
+    updateCoins();
+
+    updateInventory();
+
+    saveGame();
+
+
+    showMessage(tr("🥕 Koupil jsi semínko mrkve!","🥕 You bought a carrot seed!","🥕 Du hast Karottensamen gekauft!"));
+
+}
+
+
+/* =====================================================
+   KOUPĚ JAHODY
+===================================================== */
+
+function buyStrawberry() {
+
+    const price = 20;
+
+
+    if (
+        game.coins < price
+    ) {
+
+        showMessage(tr("Nemáš dost mincí!","Not enough coins!","Nicht genug Münzen!"));
+
+        return;
+
+    }
+
+
+    game.coins -=
+        price;
+
+    game.strawberrySeeds++;
+
+
+    updateCoins();
+
+    updateInventory();
+
+    saveGame();
+
+
+    showMessage(tr("🍓 Koupil jsi semínko divoké jahody!","🍓 You bought a wild strawberry seed!","🍓 Du hast wilde Erdbeersamen gekauft!"));
+
+}
+
+
+/* =====================================================
+   ZPRÁVY
+===================================================== */
+
+let messageTimer;
+
+
+function showMessage(
+    text
+) {
+
+    const message =
+        document.getElementById(
+            "message"
+        );
+
+
+    message.textContent =
+        text;
+
+
+    message.style.opacity =
+        "1";
+
+
+    clearTimeout(
+        messageTimer
+    );
+
+
+    messageTimer =
+        setTimeout(
+            () => {
+
+                message.style.opacity =
+                    "0";
+
+            },
+            1800
+        );
+
+}
+
+
+/* =====================================================
+   FULLSCREEN
+===================================================== */
+
+function toggleFullscreen() {
+
+    if (
+        !document.fullscreenElement
+    ) {
+
+        if (
+            document.documentElement
+                .requestFullscreen
+        ) {
+
+            document.documentElement
+                .requestFullscreen();
+
+        }
+
+    } else {
+
+        if (
+            document.exitFullscreen
+        ) {
+
+            document.exitFullscreen();
+
+        }
+
+    }
+
+}
+
+
+/* =====================================================
+   AUTOMATICKÉ UKLÁDÁNÍ
+===================================================== */
+
+setInterval(
+    saveGame,
+    5000
+);
+
+
+/* =====================================================
+   RŮST
+===================================================== */
+
+setInterval(
+    function() {
+
+        processPlants();
+
+        renderPlants();
+
+        saveGame();
+
+    },
+    1000
+);
+
+
+/* =====================================================
+   JAZYKY
+===================================================== */
+
+const translations = {
+    cs: {inv:"🎒 Inventář", shop:"🛒 Obchod", tools:"NÁSTROJE", seeds:"SEMÍNKA", hand:"✋ Ruka", shovel:"🪏 Rýč", move:"🥄 Lopatka", back:"🌱 Zpět do zahrady", shopTitle:"🛒 Obchod", have:"💰 Máš", coins:"mincí", languageTitle:"🌍 Vyber jazyk", languageSubtitle:"Vyber jazyk hry:", buy:"Koupit", seedCarrot:"Semínko mrkve", seedStrawberry:"Semínko divoké jahody", seedRadish:"Semínko ředkvičky", seedDaisy:"Semínko kopretiny", seedBlueberry:"Semínko borůvky", seedTulip:"Semínko tulipánu", price:"Cena"},
+    en: {inv:"🎒 Inventory", shop:"🛒 Shop", tools:"TOOLS", seeds:"SEEDS", hand:"✋ Hand", shovel:"🪏 Shovel", move:"🥄 Spade", back:"🌱 Back to garden", shopTitle:"🛒 Shop", have:"💰 You have", coins:"coins", languageTitle:"🌍 Choose a language", languageSubtitle:"Choose the game language:", buy:"Buy", seedCarrot:"Carrot seed", seedStrawberry:"Wild strawberry seed", seedRadish:"Radish seed", seedDaisy:"Daisy seed", seedBlueberry:"Blueberry seed", seedTulip:"Tulip seed", price:"Price"},
+    de: {inv:"🎒 Inventar", shop:"🛒 Laden", tools:"WERKZEUGE", seeds:"SAMEN", hand:"✋ Hand", shovel:"🪏 Spaten", move:"🥄 Schaufel", back:"🌱 Zurück zum Garten", shopTitle:"🛒 Laden", have:"💰 Du hast", coins:"Münzen", languageTitle:"🌍 Sprache auswählen", languageSubtitle:"Wähle die Sprache des Spiels:", buy:"Kaufen", seedCarrot:"Karottensamen", seedStrawberry:"Wilde Erdbeersamen", seedRadish:"Radieschensamen", seedDaisy:"Gänseblümchensamen", seedBlueberry:"Blaubeersamen", seedTulip:"Tulpensamen", price:"Preis"}
+};
+
+function tr(cs,en,de) {
+    return {cs,en,de}[game.language||"cs"];
+}
+
+function chooseLanguage(lang) {
+    game.language=lang;
+    saveGame();
+    applyLanguage();
+    document.getElementById("languageOverlay").style.display="none";
+}
+
+function applyLanguage() {
+    const l=translations[game.language||"cs"];
+    document.getElementById("inventoryButton").textContent=l.inv;
+    document.getElementById("shopButton").textContent=l.shop;
+    document.querySelector(".inventoryTitle").textContent=l.inv;
+    document.querySelectorAll(".inventorySectionTitle")[0].textContent=l.tools;
+    document.querySelectorAll(".inventorySectionTitle")[1].textContent=l.seeds;
+    document.getElementById("tool-hand").textContent=l.hand;
+    document.getElementById("tool-shovel").textContent=l.shovel;
+    document.getElementById("tool-move").textContent=l.move;
+    document.getElementById("tool-carrot").innerHTML='🥕 '+plantName("carrot")+' <span class="itemCount" id="carrotCount">'+game.carrotSeeds+'</span>';
+    document.getElementById("tool-strawberry").innerHTML='🍓 '+plantName("strawberry")+' <span class="itemCount" id="strawberryCount">'+game.strawberrySeeds+'</span>';
+    document.getElementById("tool-radish").innerHTML='🔴 '+plantName("radish")+' <span class="itemCount" id="radishCount">'+game.radishSeeds+'</span>';
+    document.getElementById("tool-daisy").innerHTML='🌼 '+plantName("daisy")+' <span class="itemCount" id="daisyCount">'+game.daisySeeds+'</span>';
+    document.getElementById("tool-blueberry").innerHTML='🫐 '+plantName("blueberry")+' <span class="itemCount" id="blueberryCount">'+game.blueberrySeeds+'</span>';
+    document.getElementById("tool-tulip").innerHTML='🌷 '+plantName("tulip")+' <span class="itemCount" id="tulipCount">'+game.tulipSeeds+'</span>';
+    document.querySelector(".shopBox h2").textContent=l.shopTitle;
+    document.querySelector(".closeShop").textContent=l.back;
+    document.querySelector("#languageTitle").textContent=l.languageTitle;
+    document.querySelector("#languageSubtitle").textContent=l.languageSubtitle;
+    const names=[l.seedCarrot,l.seedStrawberry,l.seedRadish,l.seedDaisy,l.seedBlueberry,l.seedTulip];
+    document.querySelectorAll(".shopName").forEach((e,i)=>e.textContent=names[i]||e.textContent);
+    document.querySelectorAll(".shopItem button").forEach(e=>e.textContent=l.buy);
+    document.querySelectorAll(".shopPrice").forEach(e=>{ const m=e.textContent.match(/[0-9\s]+/); if(m)e.textContent=l.price+": "+m[0].trim()+" 💰"; });
+    const shopCoins=document.querySelector(".shopCoins");
+    shopCoins.innerHTML=l.have+' <span id="shopCoins">'+game.coins+'</span> '+l.coins;
+    updateWeatherBox();
+    renderPlants();
+}
+
+function setupLanguage() {
+    const overlay=document.getElementById("languageOverlay");
+    if(!game.language) {
+        overlay.style.display="flex";
+    } else {
+        overlay.style.display="none";
+        applyLanguage();
+    }
+}
+
+/* =====================================================
+   START
+===================================================== */
+
+loadGame();
+
+processPlants();
+
+updateCoins();
+
+updateInventory();
+
+renderPlants();
+
+setupLanguage();
+startWeatherSystem();
+
+</script>
+
+</body>
+</html>
